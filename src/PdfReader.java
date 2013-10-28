@@ -16,17 +16,22 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.graphics.xobject.PDXObjectImage;
 
-public class PdfMain {
-	private static final String SURVEYS_FOLDER = "src/surveys";
-	private static final String IMAGES_FOLDER = "src/images/";
-	private static List<String> mySurveyNames;
-	private static Map<Integer, List<int[]>> mySurveyResponses;
-	private static int fileNumber = 0;
-	private static List<ResponseImage> myResponseImages;
+public class PdfReader {
+	private final String SURVEYS_FOLDER = "src/surveys";
+	private final String IMAGES_FOLDER = "src/images/";
+	private final String DATA_FILE = "src/properties.txt"; //NB: Page numbers are numbered from zero
+	private List<String> mySurveyNames;
+	private Map<Integer, List<int[]>> mySurveyResponses; //Maps page number to question numbers & x and y coordinates 
+	private int fileNumber = 0;
+	private List<ResponseImage> myResponseImages;
+	
+	public PdfReader() {
+		start();
+	}
 
-	private static void readPropertiesFile() {
+	private void readPropertiesFile() {
 		mySurveyResponses = new HashMap<Integer, List<int[]>>();
-		File propertiesFile = new File("src/properties.txt");
+		File propertiesFile = new File(DATA_FILE);
 		try {
 			Scanner documentInput = new Scanner(propertiesFile);
 			while (documentInput.hasNext()) {
@@ -50,13 +55,13 @@ public class PdfMain {
 					mySurveyResponses.put(pageNumber, questionAndCoordinates);
 				}
 			}
-
-		} catch (FileNotFoundException e) {
+			
+		}catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
 	}
 
-	private static List<String> getSurveyFileNames() {
+	private List<String> getSurveyFileNames() {
 		File folder = new File(SURVEYS_FOLDER);
 		File[] listOfFiles = folder.listFiles();
 		List<String> fileNames = new ArrayList<String>();
@@ -68,7 +73,7 @@ public class PdfMain {
 		return fileNames;
 	}
 
-	private static void getQuestionResponseImage(String pdfName) {
+	private void getQuestionResponseImage(String pdfName) {
 		try {
 			PDDocument document = null;
 			File file = new File(SURVEYS_FOLDER + "/" + pdfName);
@@ -86,11 +91,12 @@ public class PdfMain {
 						PDXObjectImage image = (PDXObjectImage) pageImages.get(key);
 						BufferedImage buff = image.getRGBImage();
 						for (int k = 0; k < mySurveyResponses.get(pageNum).size(); k++) {
-							BufferedImage clippedImg = buff.getSubimage(mySurveyResponses.get(pageNum).get(k)[1],mySurveyResponses.get(pageNum).get(k)[2], mySurveyResponses.get(pageNum).get(k)[3], mySurveyResponses.get(pageNum).get(k)[4]);
+							int[] myArray = mySurveyResponses.get(pageNum).get(k);
+							BufferedImage clippedImg = buff.getSubimage(myArray[1],myArray[2], myArray[3], myArray[4]);
 							File outputfile = new File(IMAGES_FOLDER + fileNumber + ".png");
 							fileNumber++;
 							ImageIO.write(clippedImg, "png", outputfile);	
-							createResponseImageObjects(file.getName(), outputfile.getName(), mySurveyResponses.get(pageNum).get(k)[0], pageNum);
+							createResponseImageObjects(file.getName(), outputfile.getName(), myArray[0], pageNum);
 						}		
 					}
 				}
@@ -102,12 +108,12 @@ public class PdfMain {
 		}
 	}
 	
-	private static void createResponseImageObjects(String fileName1, String fileName2, int questionNumber, int pageNumber) {
+	private void createResponseImageObjects(String fileName1, String fileName2, int questionNumber, int pageNumber) {
 		ResponseImage image = new ResponseImage(fileName1, questionNumber, fileName2, pageNumber);
 		myResponseImages.add(image);
 	}
 
-	public static void main(String[] args) {
+	public void start() {
 		readPropertiesFile();
 		myResponseImages = new ArrayList<ResponseImage>();
 		mySurveyNames = getSurveyFileNames();

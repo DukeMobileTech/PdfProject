@@ -22,7 +22,7 @@ public class ExcelImageWriter {
 	private List<ResponseImage> myImageObjects;
 	private int topLeftCellRow = 2;
 	private int topLeftCellCol = 3;
-	private int cellRowOffset = 8;
+	private int cellRowOffset = 12;
 	
 	public ExcelImageWriter(List<ResponseImage> imageObjects) {
 		myImageObjects = new ArrayList<ResponseImage>();
