@@ -17,21 +17,28 @@ import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.graphics.xobject.PDXObjectImage;
 
 public class PdfReader {
-	private final String SURVEYS_FOLDER = "src/surveys";
-	private final String IMAGES_FOLDER = "src/images/";
-	private final String DATA_FILE = "src/properties.txt"; //NB: Page numbers are numbered from zero
+	private String images_folder;
+	private String surveys_folder; // = "src/surveys";
+	private String data_file; // = "src/properties.txt"; //NB: Page numbers are numbered from zero
+	private String output_folder;
+	
+	private int fileNumber = 0;
+	
 	private List<String> mySurveyNames;
 	private Map<Integer, List<int[]>> mySurveyResponses; //Maps page number to question numbers & x and y coordinates 
-	private int fileNumber = 0;
 	private List<ResponseImage> myResponseImages;
 	
-	public PdfReader() {
+	public PdfReader(String properties_file, String source_folder, String img_folder, String excel_output_folder) {
+		data_file = properties_file;
+		surveys_folder = source_folder;
+		images_folder = img_folder; 
+		output_folder = excel_output_folder;
 		start();
 	}
 
 	private void readPropertiesFile() {
 		mySurveyResponses = new HashMap<Integer, List<int[]>>();
-		File propertiesFile = new File(DATA_FILE);
+		File propertiesFile = new File(data_file);
 		try {
 			Scanner documentInput = new Scanner(propertiesFile);
 			while (documentInput.hasNext()) {
@@ -45,6 +52,7 @@ public class PdfReader {
 				int height = Integer.parseInt(numbers[5]);
 				int[] imageDetails = { questionNumber, startX, startY, width,
 						height };
+				System.out.println(imageDetails[0]);
 				if (mySurveyResponses.containsKey(pageNumber)) {
 					List<int[]> list = mySurveyResponses.get(pageNumber);
 					list.add(imageDetails);
@@ -62,7 +70,7 @@ public class PdfReader {
 	}
 
 	private List<String> getSurveyFileNames() {
-		File folder = new File(SURVEYS_FOLDER);
+		File folder = new File(surveys_folder);
 		File[] listOfFiles = folder.listFiles();
 		List<String> fileNames = new ArrayList<String>();
 		for (int i = 0; i < listOfFiles.length; i++) {
@@ -70,13 +78,14 @@ public class PdfReader {
 				fileNames.add(listOfFiles[i].getName());
 			}
 		}
+		System.out.println(fileNames);
 		return fileNames;
 	}
 
 	private void getQuestionResponseImage(String pdfName) {
 		try {
 			PDDocument document = null;
-			File file = new File(SURVEYS_FOLDER + "/" + pdfName);
+			File file = new File(surveys_folder + pdfName);
 			document = PDDocument.load(file);
 			@SuppressWarnings("unchecked")
 			List<PDPage> pages = document.getDocumentCatalog().getAllPages();
@@ -85,6 +94,7 @@ public class PdfReader {
 				PDResources resources = page.getResources();
 				Map<?, ?> pageImages = resources.getImages();
 				if (pageImages != null) {
+					System.out.println("NOT NULL");
 					Iterator<?> imageIter = pageImages.keySet().iterator();
 					while (imageIter.hasNext()) {
 						String key = (String) imageIter.next();
@@ -93,7 +103,7 @@ public class PdfReader {
 						for (int k = 0; k < mySurveyResponses.get(pageNum).size(); k++) {
 							int[] myArray = mySurveyResponses.get(pageNum).get(k);
 							BufferedImage clippedImg = buff.getSubimage(myArray[1],myArray[2], myArray[3], myArray[4]);
-							File outputfile = new File(IMAGES_FOLDER + fileNumber + ".png");
+							File outputfile = new File(images_folder + fileNumber + ".png");
 							fileNumber++;
 							ImageIO.write(clippedImg, "png", outputfile);	
 							createResponseImageObjects(file.getName(), outputfile.getName(), myArray[0], pageNum);
@@ -111,6 +121,7 @@ public class PdfReader {
 	private void createResponseImageObjects(String fileName1, String fileName2, int questionNumber, int pageNumber) {
 		ResponseImage image = new ResponseImage(fileName1, questionNumber, fileName2, pageNumber);
 		myResponseImages.add(image);
+		System.out.println(image.getImageLocation());
 	}
 
 	public void start() {
@@ -121,8 +132,9 @@ public class PdfReader {
 			getQuestionResponseImage(name);
 		}
 		
+		System.out.println("EXCEL");
 		//Write images to Excel workbook
-		new ExcelImageWriter(myResponseImages);
+		new ExcelImageWriter(myResponseImages, images_folder, output_folder);
 	}
 
 }

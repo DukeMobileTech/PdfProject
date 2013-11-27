@@ -18,15 +18,19 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 
 public class ExcelImageWriter {
-	private static final String IMAGES_FOLDER = "src/images/";
+	private String images_folder;
 	private List<ResponseImage> myImageObjects;
-	private int topLeftCellRow = 2;
+	private String output_folder;
+	
+	private int topLeftCellRow = 1;
 	private int topLeftCellCol = 3;
 	private int cellRowOffset = 12;
 	
-	public ExcelImageWriter(List<ResponseImage> imageObjects) {
+	public ExcelImageWriter(List<ResponseImage> imageObjects, String img_folder, String folder_name) {
 		myImageObjects = new ArrayList<ResponseImage>();
 		myImageObjects = imageObjects;
+		images_folder = img_folder;
+		output_folder = folder_name;
 		
 		try {
 			writeImageToCell();
@@ -40,14 +44,19 @@ public class ExcelImageWriter {
 	    Workbook wb = new XSSFWorkbook(); 
 	    CreationHelper helper = wb.getCreationHelper();
     	Sheet sheet = wb.createSheet();
+    	
+    	createColumnHeaders(sheet);
 
 	    for(int k=0; k<myImageObjects.size(); k++) {
 	    	//Create rows & cells and add question numbers with images
 	    	Row row = sheet.createRow(topLeftCellRow);
+	    	Cell cell0 = row.createCell(0);
+	    	cell0.setCellValue(myImageObjects.get(k).getSourceLocation());
 	    	Cell cell = row.createCell(1);
 	    	cell.setCellValue(myImageObjects.get(k).getQuestionNumber());
+	    	
 	    	//add picture data to this workbook.
-	    	InputStream is = new FileInputStream(IMAGES_FOLDER + myImageObjects.get(k).getImageLocation());
+	    	InputStream is = new FileInputStream(images_folder + myImageObjects.get(k).getImageLocation());
 	    	byte[] bytes = IOUtils.toByteArray(is);
 	    	int pictureIdx = wb.addPicture(bytes, Workbook.PICTURE_TYPE_PNG);
 	    	is.close();
@@ -66,11 +75,22 @@ public class ExcelImageWriter {
 	    }
 	    
 	    //save workbook
-	    String file = "src/excelsheets/picture.xls";
+	    String file = output_folder + "pictures.xls";
 	    if (wb instanceof XSSFWorkbook) file += "x";
 	    FileOutputStream fileOut = new FileOutputStream(file);
 	    wb.write(fileOut);
 	    fileOut.close();
+	    System.out.println("DONE");
+	}
+
+	private void createColumnHeaders(Sheet wbsheet) {
+		Row row = wbsheet.createRow(0);
+    	Cell cell0 = row.createCell(0);
+    	cell0.setCellValue("File Name");
+    	Cell cell1 = row.createCell(1);
+    	cell1.setCellValue("Question #");
+    	Cell cell2 = row.createCell(3);
+    	cell2.setCellValue("Image");
 	}
 
 }
